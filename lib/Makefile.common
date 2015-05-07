@@ -1,0 +1,33 @@
+#*********************************************************
+# This makefile is used to create libjia.a library
+#*********************************************************
+
+CC  = gcc
+CCC = gcc
+FC = f77
+
+SRC	= ../../src
+CFLAGS	= -I./${SRC} $(ARCH_FLAGS)  -DDOSTAT 
+OBJS 	= comm.o init.o mem.o syn.o tools.o exit.o  get.o finit.o msg.o load.o
+
+VPATH   = ./$(SRC)
+
+TARGET 	= libjia.a
+
+%.d: %.c
+	@echo "Creating $@..."
+	@$(SHELL) -ec "$(CC) -MM $(CPPFLAGS) $< | sed ' s/$*\.o/& $@/g' > $@"
+
+%.d: %.f
+	@echo "Creating $@..."
+	@$(SHELL) -ec "$(FC) -c $< | sed ' s/$*\.o/& $@/g' > $@"
+
+$(TARGET):$(OBJS)
+	ar rv $(TARGET) $?
+
+all:$(TARGET)
+
+clean:
+	rm -f *.[od] $(TARGET)
+
+include $(OBJS:.o=.d) 

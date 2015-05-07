@@ -1,0 +1,271 @@
+/*
+ * A Red-Black SOR
+ *
+ *	using separate red and block matrices
+ *	to minimize false sharing
+ *
+ * Solves a M+2 by 2N+2 array
+ */
+#include <stdio.h>
+
+#include <sys/time.h>
+
+#include <jia.h>
+
+struct	timeval	start, finish;
+int		iterations = 10;
+
+int	M = 1022;
+int	N = 1023;
+int     verify = 0;
+/*
+#define M	4000
+#define	N	 254
+*/
+
+float	      **red_;
+float	      **black_;
+
+/*
+ * begin is odd
+ */
+void	sor_odd(begin, end)
+	int	begin;
+	int	end;
+{
+	int	i, j, k;
+
+	for (i = 0; i < iterations; i++) {
+
+		for (j = begin; j <= end; j++) {
+
+			for (k = 0; k < N; k++) {
+
+				black_[j][k] = (red_[j-1][k] + red_[j+1][k] + red_[j][k] + red_[j][k+1])/4.0;
+			}
+			if ((j += 1) > end)
+				break;
+
+			for (k = 1; k <= N; k++) {
+
+				black_[j][k] = (red_[j-1][k] + red_[j+1][k] + red_[j][k-1] + red_[j][k])/4.0;
+			}
+		}
+		jia_barrier();
+
+		for (j = begin; j <= end; j++) {
+
+			for (k = 1; k <= N; k++) {
+
+				red_[j][k] = (black_[j-1][k] + black_[j+1][k] + black_[j][k-1] + black_[j][k])/4.0;
+			}
+			if ((j += 1) > end)
+				break;
+
+			for (k = 0; k < N; k++) {
+
+				red_[j][k] = (black_[j-1][k] + black_[j+1][k] + black_[j][k] + black_[j][k+1])/4.0;
+			}
+		}				
+		jia_barrier();
+#ifdef	RESET_AFTER_ONE_ITERATION
+		if (i == 0) {
+
+
+			gettimeofday(&start, NULL);
+		}
+#endif
+	}
+}
+
+/*
+ * begin is even
+ */
+void	sor_even(begin, end)
+	int	begin;
+	int	end;
+{
+	int	i, j, k;
+
+	for (i = 0; i < iterations; i++) {
+
+		for (j = begin; j <= end; j++) {
+
+			for (k = 1; k <= N; k++) {
+
+				black_[j][k] = (red_[j-1][k] + red_[j+1][k] + red_[j][k-1] + red_[j][k])/4.0;
+			}
+			if ((j += 1) > end)
+				break;
+
+			for (k = 0; k < N; k++) {
+
+				black_[j][k] = (red_[j-1][k] + red_[j+1][k] + red_[j][k] + red_[j][k+1])/4.0;
+			}
+		}
+		jia_barrier();
+
+		for (j = begin; j <= end; j++) {
+
+			for (k = 0; k < N; k++) {
+
+				red_[j][k] = (black_[j-1][k] + black_[j+1][k] + black_[j][k] + black_[j][k+1])/4.0;
+			}
+			if ((j += 1) > end)
+				break;
+
+			for (k = 1; k <= N; k++) {
+
+				red_[j][k] = (black_[j-1][k] + black_[j+1][k] + black_[j][k-1] + black_[j][k])/4.0;
+			}
+		}				
+		jia_barrier();
+#ifdef	RESET_AFTER_ONE_ITERATION
+		if (i == 0) {
+
+
+			gettimeofday(&start, NULL);
+		}
+#endif
+	}
+}
+
+extern	char	       *optarg;
+
+main(argc, argv)
+	int		argc;
+	char	       *argv[];
+{
+	int		c, i, j;
+	int		begin, end;
+
+	while ((c = getopt(argc, argv, "vi:m:n:")) != -1)
+		switch (c) {
+		case 'i':
+			iterations = atoi(optarg);
+			break;
+		      case 'm':
+			M = atoi(optarg);
+			break;
+		      case 'n':
+			N = atoi(optarg);
+			break;
+		      case 'v':
+			verify = 1;
+			break;
+		}
+	jia_init(argc, argv);
+
+		sleep(jiapid*2);
+		if ((red_ = (float **) jia_alloc((M + 2)*sizeof(float *))) == 0)
+			assert(0,"out of shared memory");
+
+		if ((black_ = (float **) jia_alloc((M + 2)*sizeof(float *))) == 0)
+			assert(0,"out of shared memory");
+
+		for (i = 0; i <= M + 1; i++) {
+
+			if ((red_[i] = (float *) jia_alloc((N + 1)*sizeof(float))) == 0)
+				assert(0,"out of shared memory");
+
+			if ((black_[i] = (float *) jia_alloc((N + 1)*sizeof(float))) == 0)
+				assert(0,"out of shared memory");
+		}
+
+        jia_barrier();
+        if (jiapid ==0) 
+		Initialize (red_, black_);
+        
+	jia_barrier();
+	begin = (M*jiapid)/jiahosts + 1;
+	end   = (M*(jiapid + 1))/jiahosts;
+
+
+	gettimeofday(&start, NULL);
+
+	if (begin & 1)
+		sor_odd(begin, end);
+	else
+		sor_even(begin, end);
+
+	gettimeofday(&finish, NULL);
+
+	printf("Elapsed time: %.2f seconds\n",
+	       (((finish.tv_sec * 1000000.0) + finish.tv_usec) -
+		((start.tv_sec * 1000000.0) + start.tv_usec)) / 1000000.0);
+
+	if (verify && jiapid == 0)
+	  { 
+	    FILE *res;
+      
+	    res = fopen("vres", "w");
+	    for ( i=0; i<M+2; i++) {
+	      if (i&1)
+		for (j=0; j<N+1; j++) {
+		  fprintf(res,"[%d][%d] = %f\n", i, 2*j, red_[i][j]);
+		  fprintf(res,"[%d][%d] = %f\n", i, 2*j+1, black_[i][j]);
+		}
+	      else
+		for (j=0; j<N+1; j++) {
+		  fprintf(res,"[%d][%d] = %f\n", i, 2*j, black_[i][j]);
+		  fprintf(res,"[%d][%d] = %f\n", i, 2*j+1, red_[i][j]);
+		}
+	    } /* for i */
+	  }
+	jia_exit();
+}
+
+
+/***************************************************************************\
+	Initialize() intializes the array as follows. Each row is broken
+	up into intervals (of size 30 now). Within an interval, the red data
+	points form an increasing exponential function, while the black data
+	points form a decreasing exp function. Quite obviously, there may be
+	other (simpler) functions that give the same behavior.
+\***************************************************************************/
+	
+Initialize (red, black)
+float	**red, **black; {
+
+#define INTERVAL 35
+#define EXP1	2.7182818283
+extern double 	exp();
+
+int	j, k, incr_r, incr_b;
+
+    for (j = 0; j < M + 2; j++) {
+
+	incr_r = 2; 
+	incr_b = INTERVAL;
+
+	if (!(j & 1)) {		/* Even row */
+	    red[j][0] = EXP1;
+	    for (k = 0; k < N; k++) {
+		black[j][k] = (float) exp((double) 0.376 + (incr_r++));
+		red[j][k+1] = (float) exp((double) 0.745 + (incr_b--));
+
+		if (incr_r > INTERVAL) {
+		    incr_r = 2;
+		    incr_b = INTERVAL;
+		}
+	    }
+	    black[j][N] = EXP1;
+	}
+	else {			/* Odd row */
+	    black[j][0] = EXP1;
+	    for (k = 0; k < N; k++) {
+		red[j][k] = (float) exp((double) (incr_r++));
+		black[j][k+1] = (float) exp((double) (incr_b--));
+
+		if (incr_r > INTERVAL) {
+		    incr_r = 2;
+		    incr_b = INTERVAL;
+		}
+	    }
+	    red[j][N] = EXP1;
+	}
+    }
+}
+
+
+

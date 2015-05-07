@@ -1,0 +1,64 @@
+************************************************************
+ *                                                                     *
+ *   The JIAJIA Software Distributed Shared Memory System              *
+ *                                                                     *
+ *   Copyright (C) 1997 the Center of High Performance Computing       *
+ *   of Institute of Computing Technology, Chinese Academy of          * 
+ *   Scieneces.  All rights reserved.                                  *  
+ *                                                                     *
+ *   Permission to use, copy, modify and distribute this software      *  
+ *   is hereby granted provided that (1) source code retains these     *  
+ *   copyright, permission, and disclaimer notices, and (2) redistri-  *
+ *   butions including binaries reproduce the notices in supporting    *
+ *   documentation, and (3) all advertising materials mentioning       *  
+ *   features or use of this software display the following            *  
+ *   acknowledgement: ``This product includes software developed by    *
+ *   the Center of High Performance Computing, Institute of Computing  *
+ *   Technology, Chinese Academy of Scieneces."                        *  
+ *                                                                     *
+ *   This program is distributed in the hope that it will be useful,   *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of    *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.              *  
+ *                                                                     *
+ *   Center of High Performance Computing requests users of this       *  
+ *   software to return to dsm@water.chpc.ict.ac.cn any                *  
+ *   improvements that they make and grant CHPC redistribution rights. *
+ *                                                                     *
+ *         Author: Weiwu Hu, Weisong Shi, Zhimin Tang                  * 
+ *    Web-page: http://www-users.cs.umn.edu/~tianhe/paper/dist.htm     *
+ *                                                                     *
+ **********************************************************************/
+
+1) Read the docs!
+
+2) This is still an early release, so please be prepared for configuration
+   problems and/or bugs.  
+
+3) Please send any source changes/new protocols that you think might be of
+   general use to me so that I can fold them back into the next distribution.
+
+
+=============================================================================
+Installing JIAJIA
+=============================================================================
+Currently, JIAJIA can be compiled by GNU gcc compiler or SUN cc compiler.
+
+Please let me know if this does not work for anyone, and what *does* work
+for you if this does not. 
+
+Before running any programs, set up your .jiahosts file at the directory of
+your applications.  starting with the host that you start on.
+
+
+=============================================================================
+dsm@water.chpc.ict.ac.cn (please include 'JIAJIA' in the subject line of all mail)
+=============================================================================
+
+
+
+Weisong Shi
+
+Center of High Performance Computing 
+Institute of Computing Technology 
+Chinese Academy of Sciences
+
